@@ -1,7 +1,7 @@
 import {
   APP_ID,
   VERSION,
-  SCOPE
+  SOCKETIO_URL
 } from './config';
 import FacebookController from './controller/facebookController';
 import renderer from './view/renderer';
@@ -9,7 +9,7 @@ import ls from './model/localstorage';
 import io from 'socket.io-client';
 
 const fb = new FacebookController(APP_ID, VERSION);
-const socket = io('https://powerful-cliffs-28002.herokuapp.com');
+const socket = io(SOCKETIO_URL);
 
 // connect to the socketio server to receive the message from facebook
 socket.on('new_message', function (data) {
@@ -218,12 +218,14 @@ const handleSubFunction = (e) => {
         console.log('subscribed');
         checkUserPages();
         checkPageConversations();
+        saveSubedPageInDB();
       }
       else if (response.unsubscribe) {
         console.log('unsubscribe');
         renderer.renderUserPages(fb.user_pages, addListenerToPageNodes);
         renderer.clearConversationList();
         renderer.clearMessageList();
+        removeSubedPageFromDB();
       }
       else {
         throw new Error(response);
@@ -232,6 +234,22 @@ const handleSubFunction = (e) => {
     .catch(error => {
       console.log('error subscribe:', error);
     });
+}
+
+const saveSubedPageInDB = async () => {
+  try {
+    await fb.saveSubedPageInDB();
+  } catch (error) {
+    console.log('saveSubedPageInDB error', error);
+  }
+}
+
+const removeSubedPageFromDB = async () => {
+  try {
+    await fb.removeSubedPageFromDB();
+  } catch (error) {
+    console.log('removeSubedPageFromDB error', error);
+  }
 }
 
 const getMessages = (e) => {

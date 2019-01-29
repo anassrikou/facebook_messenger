@@ -1,6 +1,6 @@
 import ls from '../model/localstorage';
 import renderer from '../view/renderer';
-
+import { BASE_URL, FB_BASE_URL } from '../config';
 /**
  * the controller class for all the facebook operations using the FB api
  *
@@ -18,6 +18,8 @@ export default class FacebookController {
   constructor(app_id, version) {
     this.app_id = app_id;
     this.version = version;
+    this.base_url = BASE_URL || location.host;
+    this.fb_base_url = FB_BASE_URL || '/me';
     this.token = '';
     this.status = '';
     this.user_pages = [];
@@ -106,7 +108,7 @@ export default class FacebookController {
         // so we send request to FB API to get them
         // then we save the result in LS
         console.log('getting user pages from api');
-        FB.api('/me/accounts?fields=name,id,access_token,picture{url}', {
+        FB.api(this.fb_base_url + '/accounts?fields=name,id,access_token,picture{url}', {
             'access_token': this.token
           },
           response => {
@@ -188,7 +190,7 @@ export default class FacebookController {
 
   checkForDeclinedPermissions() {
     return new Promise((resolve, reject) => {
-      FB.api('/me/permissions', function(response) {
+      FB.api(this.fb_base_url + '/permissions', function(response) {
         var declined = [];
         for (let i = 0; i < response.data.length; i++) { 
           if (response.data[i].status == 'declined') {
@@ -209,7 +211,7 @@ export default class FacebookController {
   checkBackendForToken() {
     const form_data = new FormData();
     form_data.append('action', 'get');
-    return fetch('http://localhost:21080/fb-callback.php', {
+    return fetch(this.base_url + '/fb-callback.php', {
       method: 'POST',
       body: form_data,
     });
@@ -225,7 +227,7 @@ export default class FacebookController {
     const form_data = new FormData();
     form_data.append('access-token', this.token);
     form_data.append('action', 'change');
-    return fetch('http://localhost:21080/fb-callback.php', {
+    return fetch(this.base_url + '/fb-callback.php', {
         method: 'POST',
         body: form_data,
     });
@@ -303,7 +305,7 @@ export default class FacebookController {
    */
   subscribePage(page) {
     return new Promise((resolve, reject) => {
-      FB.api('/me/subscribed_apps?subscribed_fields=messages,messaging_postbacks',
+      FB.api(this.fb_base_url + '/subscribed_apps?subscribed_fields=messages,messaging_postbacks',
         'post', {
           'access_token': page.access_token
         },
@@ -312,6 +314,16 @@ export default class FacebookController {
           this.setUserSubedPage(page);
           resolve(response);
         });
+    });
+  }
+
+  saveSubedPageInDB() {
+    const form_data = new FormData();
+    form_data.append('action', 'subscribe');
+    form_data.append('page', this.user_subscribed_page);
+    return fetch(this.base_url + '/fb-callback.php', {
+      method: 'POST',
+      body: form_data,
     });
   }
 
@@ -324,7 +336,7 @@ export default class FacebookController {
    */
   unsubscribePage(page) {
     return new Promise((resolve, reject) => {
-      FB.api('/me/subscribed_apps',
+      FB.api(this.fb_base_url + '/subscribed_apps',
         'delete', {
           'access_token': page.access_token
         },
@@ -338,6 +350,16 @@ export default class FacebookController {
     });
   }
 
+  removeSubedPageFromDB() {
+    const form_data = new FormData();
+    form_data.append('action', 'unsubscribe');
+    return fetch(this.base_url + '/fb-callback.php', {
+      method: 'POST',
+      body: form_data,
+    });
+  }
+
+  // REVIEW find out what's the point of this function!!!
   resetSubedPage() {
     this.user_subscribed_page = {};
   }
@@ -350,7 +372,7 @@ export default class FacebookController {
    */
   getPageConversations() {
     return new Promise((resolve, reject) => {
-      FB.api('/me/conversations?fields=id,senders', {
+      FB.api(this.fb_base_url + '/conversations?fields=id,senders', {
         'access_token': this.user_subscribed_page.access_token
       }, response => {
         console.log('convo', response);

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Messenger</title>
+  <script src="https://connect.facebook.net/en_US/sdk.js"></script>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css" integrity="sha384-PmY9l28YgO4JwMKbTvgaS7XNZJ30MK9FAZjjzXtlqyZCqBY6X6bXIkM++IkyinN+"
+    crossorigin="anonymous">
+  <style>
+    #messagelist {
+      max-height: 300px;
+      overflow-y: scroll;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <fb:login-button scope="public_profile,email,manage_pages,pages_show_list,publish_pages,read_page_mailboxes,pages_messaging"
+      data-auto-logout-link="true" data-size="medium">
+    </fb:login-button>
+    <div id="status"></div>
+    <hr />
+    <div id="pages">
+      <h4>your pages:</h4>
+      <ul id="pagelist"></ul>
+    </div>
+    <hr />
+    <div id="row conversations">
+      <h4> your conversations:</h4>
+      <div class="col-sm-4">
+        <ul id="conversationlist"></ul>
+      </div>
+      <div class="col-sm-6">
+        <ul id="messagelist"></ul>
+        <div class="row">
+          <form id="sendform" method="post" class="hidden">
+            <input type="text" id="message" name="message" required placeholder="write something..." />
+            <input type="submit" value="send" />
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

@@ -3,7 +3,7 @@ import {
   VERSION,
   SOCKETIO_URL
 } from './config';
-import FacebookController from './controller/facebookController';
+import FacebookController from './controller/FacebookController';
 import renderer from './view/renderer';
 import ls from './model/localstorage';
 import io from 'socket.io-client';
@@ -31,17 +31,20 @@ async function init() {
     // fb.setToken(response.authResponse.accessToken);
     let token;
     let token_from_server = 'no token';
+
     token = await checkForTokenInLocal();
-    console.log('token', token);
+    console.log(token);
+
     if (token.error) {
       // there's no token in localstorage, get it from server
       console.log('no token');
-      token_from_server = await checkForTokenInServer();
+      token_from_server = JSON.parse(await checkForTokenInServer());
       if (!token_from_server) {
         // save the token
         fb.setToken(response.authResponse.accessToken);
       } else {
-        fb.setToken(token_from_server);
+        console.log('token_from_server:', token_from_server);
+        fb.setToken(token_from_server.response);
       }
     }
     
@@ -83,7 +86,7 @@ const checkForTokenInLocal = async () => {
   }
 }
 
-const checkForTokenInServer =async () => {
+const checkForTokenInServer = async () => {
   try {
     const response = await fb.checkBackendForToken();
     return await response.text();
@@ -126,6 +129,15 @@ const checkForSubedPage = async () => {
     console.log('checkForSubedPage error', error);
   }
 }
+
+const checkForSubedPageFromDB = async () => {
+  try {
+    return await fb.checkForSubedPageFromDB();
+  } catch (error) {
+    console.log('checkForSubedPageFromDB error', error);
+  }
+}
+
 const checkForSubedPageByApi = () => {
   try {
     return fb.checkForSubedPageByApi((error, response) => {
@@ -156,16 +168,24 @@ const checkUserPages = async () =>  {
     console.log('subed_page', subed_page);
     if (!subed_page || subed_page.error) {
       console.log('no subed page in ls');
-      // no page is subed and saved in localstorage, so we check using the API
-      subed_page_from_api = checkForSubedPageByApi();
-      console.log('subedpage from api', subed_page_from_api);
-      console.log('pages.... ', pages);
-      if (!subed_page_from_api || subed_page_from_api.error || Object.keys(subed_page_from_api).length === 0) {
-        renderer.renderUserPages(pages, addListenerToPageNodes);
+      // no page is subed and saved in localstorage, check in the DB then we check using the API
+      const subed_page_from_db = await checkForSubedPageFromDB();
+      console.log('subed page from db: ', subed_page_from_db);
+      if (!subed_page_from_db || subed_page_from_db.error) {
+        subed_page_from_api = checkForSubedPageByApi();
+        console.log('subedpage from api', subed_page_from_api);
+        console.log('pages.... ', pages);
+        if (!subed_page_from_api || subed_page_from_api.error || Object.keys(subed_page_from_api).length === 0) {
+          renderer.renderUserPages(pages, addListenerToPageNodes);
+        } else {
+          console.log('subed pagr form api');
+          fb.setUserSubedPage(subed_page_from_api);
+          renderer.renderUserSubedPage(subed_page_from_api, addListenerToPageNodes);
+        }
       } else {
-        console.log('subed pagr form api');
-        fb.setUserSubedPage(subed_page_from_api);
-        renderer.renderUserSubedPage(subed_page_from_api, addListenerToPageNodes);
+        // render the subed page we got from the db
+        fb.setUserSubedPage(JSON.parse(subed_page_from_db));
+        renderer.renderUserSubedPage(JSON.parse(subed_page_from_db), addListenerToPageNodes);
       }
     } else {
       fb.setUserSubedPage(subed_page);
@@ -179,11 +199,14 @@ const checkUserPages = async () =>  {
 
 const checkPageConversations = async () => {
   try {
+    renderer.showLoader();
     const conversations = await getPageConversations();
-    console.log(conversations);
-    fb.getAllSenders(conversations);
-
-    renderer.renderPageConversations(conversations, addListenerToConversationNodes);
+    fb.getAllSenders(conversations, conversation => {
+      console.log(conversation); renderer.renderPageConversation(conversation, addListenerToConversationNodes)
+      });
+    // after we finish rendering all the conversations, we remove the loader
+    renderer.hideLoader();
+    // renderer.renderPageConversations(conversations, addListenerToConversationNodes);
   } catch (error) {
     console.log('checkPageConversations error', error);
   }

@@ -18,7 +18,7 @@ export default class FacebookController {
   constructor(app_id, version) {
     this.app_id = app_id;
     this.version = version;
-    this.base_url = BASE_URL || location.host;
+    this.base_url = BASE_URL || location.origin;
     this.fb_base_url = FB_BASE_URL || '/me';
     this.token = '';
     this.status = '';
@@ -210,7 +210,7 @@ export default class FacebookController {
    */
   checkBackendForToken() {
     const form_data = new FormData();
-    form_data.append('action', 'get');
+    form_data.append('action', 'get_token');
     return fetch(this.base_url + '/fb-callback.php', {
       method: 'POST',
       body: form_data,
@@ -226,11 +226,11 @@ export default class FacebookController {
   getLongLivedToken() {
     const form_data = new FormData();
     form_data.append('access-token', this.token);
-    form_data.append('action', 'change');
+    form_data.append('action', 'change_token');
     return fetch(this.base_url + '/fb-callback.php', {
         method: 'POST',
         body: form_data,
-    });
+    }).then(response => response.json());
   }
 
   /**
@@ -241,6 +241,15 @@ export default class FacebookController {
    */
   checkForSubedPage() {
     return ls.loadFromLocalStorage('subed_page');
+  }
+
+  checkForSubedPageFromDB() {
+    const form_data = new FormData();
+    form_data.append('action', 'get_subscription');
+    return fetch(this.base_url + '/fb-callback.php', {
+      method: 'POST',
+      body: form_data,
+    }).then(response => response.json());
   }
 
   /**
@@ -319,12 +328,12 @@ export default class FacebookController {
 
   saveSubedPageInDB() {
     const form_data = new FormData();
-    form_data.append('action', 'subscribe');
-    form_data.append('page', this.user_subscribed_page);
+    form_data.append('action', 'subscribe_page');
+    form_data.append('page', JSON.stringify(this.user_subscribed_page));
     return fetch(this.base_url + '/fb-callback.php', {
       method: 'POST',
       body: form_data,
-    });
+    }).then(response => response.json());
   }
 
   /**
@@ -352,11 +361,11 @@ export default class FacebookController {
 
   removeSubedPageFromDB() {
     const form_data = new FormData();
-    form_data.append('action', 'unsubscribe');
+    form_data.append('action', 'unsubscribe_page');
     return fetch(this.base_url + '/fb-callback.php', {
       method: 'POST',
       body: form_data,
-    });
+    }).then(response => response.json());
   }
 
   // REVIEW find out what's the point of this function!!!
@@ -391,18 +400,37 @@ export default class FacebookController {
    * @param {array} conversations
    * @memberof FacebookController
    */
-  getAllSenders(conversations) {
-    let users = [];
-    conversations.forEach(function (conversation) {
-      conversation.senders.data.forEach(function (sender) {
-        users.push(sender);
-      });
+  getAllSenders(conversations, cb) {
+      let users_id = [];
+      conversations.forEach( conversation => {
+        conversation.senders.data.forEach(async (sender, pos, arr) => {
+          if (this.user_subscribed_page.id !== sender.id) {
+            const user_info = await this.getUserInfo(sender);
+            users_id.push(sender.id);
+            arr[pos] = user_info;
+            cb(conversation);
+          }
+        });
     });
     // filter the list of users to keep only unique values
-    this.senders_list = users.filter((user, pos, arr) => {
-      return arr.map(mapObj => mapObj['id']).indexOf(user['id']) === pos;
+    // const filtered_users = users.filter((user, pos, arr) => {
+    //   return arr.map(mapObj => mapObj['id']).indexOf(user['id']) === pos;
+    // });
+    // // map through the array and get the user information
+    // filtered_users.forEach( async user => {
+    //   console.log(user_info);
+    //   this.senders_list.push(user_info);
+    //   ls.saveInLocalStorage('senders_list', this.senders_list);
+    // });
+  }
+
+  getUserInfo(user) {
+    return new Promise((resolve, reject) => {  
+      FB.api(`/${user.id}`, { 'access_token': this.user_subscribed_page.access_token }, response => {
+        console.log('user info:', response);
+        resolve(response);
+      });
     });
-    ls.saveInLocalStorage('senders_list', this.senders_list);
   }
 
   /**

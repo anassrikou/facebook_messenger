@@ -1,7 +1,7 @@
 // VERY IMPORTANT make an error handler function
 IMPORTANT handle new client sending message => made a solution for it, still need testing
 
-REVIEW make generic function for calling backend and getting result
+REVIEW (improvements) make generic function for calling backend and getting result
 REVIEW put all localstorage lines in their own function => done
 REVIEW save access token in db and retrieve when doesnt exist client-side => done
 REVIEW save subscribed pages in db and retrieve when doesnt exist client-side => done

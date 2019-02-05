@@ -2,6 +2,7 @@ const pagelist = document.querySelector('#pagelist');
 const conversationlist = document.querySelector('#conversationlist');
 const messagelist = document.querySelector('#messagelist');
 const sendform = document.querySelector('#sendform');
+const loader = document.querySelector('.loader');
 
 export default {
 
@@ -49,21 +50,21 @@ export default {
    * @param {array} conversations
    * @param {function} cb
    */
-  renderPageConversations: function(conversations, cb) {
-    this.clearConversationList();
-    conversations.forEach(conversation => {
+  renderPageConversation: function(conversation, cb) {
+    // this.clearConversationList();
+    
       const markup = `
       <div class="chat_list">
         <div class="chat_people">
-          <div class="chat_img"> <img src="https://ptetutorials.com/images/user-profile.png"> </div>
+          <div class="chat_img"> <img src="${conversation.senders.data[0].profile_pic}"> </div>
           <div class="chat_ib">
-            <a href='#' class="conversation" data-id='${conversation.id}'> ${conversation.senders.data[0].name} </a>
+            <a href='#' class="conversation" data-id='${conversation.id}'> ${conversation.senders.data[0].first_name} ${conversation.senders.data[0].last_name} </a>
           </div>
         </div>
       </div>
       `;
       conversationlist.insertAdjacentHTML('beforeend', markup);
-    });
+    
     cb();
   },
 
@@ -162,5 +163,13 @@ export default {
   hideInput: function() {
     sendform.classList.add('hidden');
   },
+
+  showLoader: function () {
+    loader.classList.remove('hidden');
+  },
+
+  hideLoader: function() {
+    loader.classList.add('hidden');
+  }
 
 }

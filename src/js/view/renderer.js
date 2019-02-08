@@ -50,11 +50,9 @@ export default {
    * @param {array} conversations
    * @param {function} cb
    */
-  renderPageConversation: function(conversation, cb) {
-    // this.clearConversationList();
-    
+  renderPageConversation: function(conversation, cb) {    
       const markup = `
-      <div class="chat_list">
+      <div class="chat_list" ${ conversation.unread_count > 0 ? 'style="background-color:antiquewhite"' : '' }>
         <div class="chat_people">
           <div class="chat_img"> <img src="${conversation.senders.data[0].profile_pic}"> </div>
           <div class="chat_ib">
@@ -111,11 +109,11 @@ export default {
    * @param {string} message
    * @param {string} sender
    */
-  renderNewReceivedMessage: function(message, sender) {
+  renderNewReceivedMessage: function(message, sender_name) {
     const markup = `
       <div class="incoming_msg">
         <div class="received_msg">
-          <p>${sender}: ${message}</p>
+          <p>${sender_name}: ${message}</p>
         </div>
       </div>
     `;
@@ -165,11 +163,23 @@ export default {
   },
 
   showLoader: function () {
+    console.log('showing loader');
     loader.classList.remove('hidden');
   },
 
   hideLoader: function() {
+    console.log('hiding loader');
     loader.classList.add('hidden');
+  },
+
+  showNoPageAlert: function() {
+    const markup = `
+      <li>
+        you don't have any page. please create a facebook 
+        <a href="https://www.facebook.com/pages/creation/" target="_blank">page</a> first.
+      </li>
+    `;
+    pagelist.insertAdjacentHTML('beforeend', markup);
   }
 
 }

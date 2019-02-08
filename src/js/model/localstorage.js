@@ -18,11 +18,10 @@ export default {
    * @param {string} key
    * @returns promise
    */
-  loadFromLocalStorage: key => {
-    return new Promise((resolve, reject) => {
-      if (localStorage.getItem(key) === null) resolve({ error: 'not found' });
-      return resolve(JSON.parse(localStorage.getItem(key)));
-    });
+  loadFromLocalStorage: (key = '') => {
+    console.log('key', key);
+    // if (localStorage.getItem(key) === null) throw new Error(key + 'not found');
+    return JSON.parse(localStorage.getItem(key));
   },
 
   /**
@@ -31,11 +30,10 @@ export default {
    * @param {string} key
    * @returns promise
    */
-  removeFromLocalStorage: key => {
-    return new Promise((resolve, reject) => {
-      if (localStorage.getItem(key) === null) reject({ error: 'not found' });
-      return resolve(localStorage.removeItem(key));
-    });
+  removeFromLocalStorage: (key = '') => {
+    console.log('key', key);
+    // since this is not critical part of the operation, no need for extra check.
+    localStorage.removeItem(key);
   },
 
   /**

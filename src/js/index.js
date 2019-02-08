@@ -4,11 +4,15 @@ import {
   SOCKETIO_URL
 } from './config';
 import FacebookController from './controller/FacebookController';
+import ErrorController from './controller/ErrorController';
+import notifier from './controller/NotificationController';
 import renderer from './view/renderer';
 import ls from './model/localstorage';
 import io from 'socket.io-client';
 
+
 const fb = new FacebookController(APP_ID, VERSION);
+const errorController = new ErrorController();
 const socket = io(SOCKETIO_URL);
 
 // connect to the socketio server to receive the message from facebook
@@ -34,12 +38,13 @@ async function init() {
 
     token = await checkForTokenInLocal();
     console.log(token);
-
-    if (token.error) {
+    
+    if (!token) {
       // there's no token in localstorage, get it from server
       console.log('no token');
+      
       token_from_server = JSON.parse(await checkForTokenInServer());
-      if (!token_from_server) {
+      if (token_from_server.response === null) {
         // save the token
         fb.setToken(response.authResponse.accessToken);
       } else {
@@ -67,21 +72,23 @@ async function init() {
     await checkUserPages();
     
     // check if the user doesnt have any subed page
-    // if (Object.keys(fb.user_subscribed_page).length === 0 && fb.user_subscribed_page.constructor === Object) {
-    //   throw new Error('u dont have subed page');
-    // }
+    if (Object.keys(fb.user_subscribed_page).length === 0 && fb.user_subscribed_page.constructor === Object) {
+      return;
+    }
 
     await checkPageConversations();
 
   } catch (error) {
+    errorController.handleError(error);
     console.error('cant init FB api ', error);
   }
 };
 
-const checkForTokenInLocal = async () => {
+const checkForTokenInLocal = () => {
   try {
-    return await fb.getTokenFromLocalStorage();
+    return fb.getTokenFromLocalStorage();
   } catch (error) {
+    errorController.handleError(error);
     console.log('checkForTokenInLocal error', error);
   }
 }
@@ -91,6 +98,7 @@ const checkForTokenInServer = async () => {
     const response = await fb.checkBackendForToken();
     return await response.text();
   } catch (error) {
+    errorController.handleError(error);
       console.log('checkForTokenInServer error', error);
   }
 }
@@ -118,15 +126,17 @@ const getUserPages = async () => {
     console.log(pages);
     return pages;
   } catch (error) {
+    errorController.handleError(error);
     console.log('getUserPages error', error);
   }
 }
 
-const checkForSubedPage = async () => {
+const checkForSubedPage = () => {
   try {
-    return await fb.checkForSubedPage();
+    return fb.checkForSubedPage();
   } catch (error) {
-    console.log('checkForSubedPage error', error);
+    // console.log('checkForSubedPage error', error);
+    errorController.handleError(error);
   }
 }
 
@@ -134,6 +144,7 @@ const checkForSubedPageFromDB = async () => {
   try {
     return await fb.checkForSubedPageFromDB();
   } catch (error) {
+    errorController.handleError(error);
     console.log('checkForSubedPageFromDB error', error);
   }
 }
@@ -141,20 +152,22 @@ const checkForSubedPageFromDB = async () => {
 const checkForSubedPageByApi = () => {
   try {
     return fb.checkForSubedPageByApi((error, response) => {
-      if (error) return console.log(error);
+      if (error) return console.log(error); // nothing to do here
       return response;
     });
   } catch (error) {
+    errorController.handleError(error);
     console.log('checkForSubedPageByApi error', error);
   }
 }
 
 const getPageConversations = async () => {
-  try {
-    return await fb.getPageConversations();
-  } catch (error) {
-    console.log('getPageConversations error', error);
-  }
+  return await fb.getPageConversations();
+  // try {
+  // } catch (error) {
+  //   errorController.handleError(error);
+  //   console.log('getPageConversations error', error);
+  // }
 }
 
 // IMPORTANT fix this issue: not showing the subed page if ls is empty
@@ -162,7 +175,7 @@ const checkUserPages = async () =>  {
   try {
     const pages = await getUserPages();
     var subed_page_from_api;
-    if (pages.length === 0) return console.log('no pages');
+    if (pages.length === 0) return renderer.showNoPageAlert();
     // after getting user pages, check if one of the page is subscribed
     const subed_page = await checkForSubedPage();
     console.log('subed_page', subed_page);
@@ -191,25 +204,26 @@ const checkUserPages = async () =>  {
       fb.setUserSubedPage(subed_page);
       renderer.renderUserSubedPage(subed_page, addListenerToPageNodes);
     }
-
   } catch (error) {
+    errorController.handleError(error);
     console.log('error checking user pages: ', error);
   }
 }
 
 const checkPageConversations = async () => {
-  try {
-    renderer.showLoader();
-    const conversations = await getPageConversations();
-    fb.getAllSenders(conversations, conversation => {
-      console.log(conversation); renderer.renderPageConversation(conversation, addListenerToConversationNodes)
-      });
-    // after we finish rendering all the conversations, we remove the loader
-    renderer.hideLoader();
-    // renderer.renderPageConversations(conversations, addListenerToConversationNodes);
-  } catch (error) {
-    console.log('checkPageConversations error', error);
-  }
+  // try {
+  renderer.showLoader();
+  const conversations = await getPageConversations();
+  fb.getAllSenders(conversations, conversation => {
+    console.log(conversation); renderer.renderPageConversation(conversation, addListenerToConversationNodes)
+  });
+  // after we finish rendering all the conversations, we remove the loader
+  renderer.hideLoader();
+  // renderer.renderPageConversations(conversations, addListenerToConversationNodes);
+  // } catch (error) {
+  //   errorController.handleError(error);
+  //   console.log('checkPageConversations error', error);
+  // }
   
 }
 
@@ -242,6 +256,7 @@ const handleSubFunction = (e) => {
         checkUserPages();
         checkPageConversations();
         saveSubedPageInDB();
+        notifier.showSuccessNotification('subscribed successfuly');
       }
       else if (response.unsubscribe) {
         console.log('unsubscribe');
@@ -249,6 +264,7 @@ const handleSubFunction = (e) => {
         renderer.clearConversationList();
         renderer.clearMessageList();
         removeSubedPageFromDB();
+        notifier.showSuccessNotification('unsubscribed successfuly');
       }
       else {
         throw new Error(response);
@@ -256,6 +272,7 @@ const handleSubFunction = (e) => {
     })
     .catch(error => {
       console.log('error subscribe:', error);
+      errorController.handleError(error.error);
     });
 }
 
@@ -313,9 +330,13 @@ const updateCurrentConversation = (message) => {
   fb.updateConversationMessages(message, () => {
     fb.getPageConversations()
       .then(response => {
+        renderer.showLoader();  
         console.log(response);
-        fb.getAllSenders(response);
-        renderer.renderPageConversations(response, addListenerToConversationNodes);
+        fb.getAllSenders(conversations, conversation => {
+          console.log(conversation); renderer.renderPageConversation(conversation, addListenerToConversationNodes)
+          // after we finish rendering all the conversations, we remove the loader
+          renderer.hideLoader();  
+        });
       })
       .catch(error => {
         console.log(error);

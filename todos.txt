@@ -1,14 +1,27 @@
-// VERY IMPORTANT make an error handler function
+Work in progress:
+
+IMPORTANT make an error handler function
 IMPORTANT handle new client sending message => made a solution for it, still need testing
+IMPORTANT seems like some errors are fired uncorrectly (find out why)
 
 REVIEW (improvements) make generic function for calling backend and getting result
+
+TODO show notification for a message coming from user who's not current sender 
+
+======================================
+Done:
+
+REVIEW saving the token from LS can be risky if user didnt logout and someone else use the computer
+ => made the login page clear the LS
 REVIEW put all localstorage lines in their own function => done
 REVIEW save access token in db and retrieve when doesnt exist client-side => done
 REVIEW save subscribed pages in db and retrieve when doesnt exist client-side => done
 
-FIXME user pages load twice first time
-FIXME status change being called twice
+FIXME status change being called twice (facebook login event is trigerring twice)
+FIXME user pages load twice first time => done
 
+TODO show "no page subscribed" if subscribed_page is empty and 
+      dont try to load conversations (will result in error) => done
 TODO finish the new sender not appearing in the conversation list 
-TODO show "no page subscribed" if subscribed_page is empty and dont try to load conversations (will result in error)
+  => new user will trigger conversations to reload
 TODO subscribe and unsubscribe send request to server to handle the subed/unsubed page => done

@@ -1,6 +1,8 @@
 import ls from '../model/localstorage';
 import renderer from '../view/renderer';
 import { BASE_URL, FB_BASE_URL } from '../config';
+import notifier from './NotificationController';
+
 /**
  * the controller class for all the facebook operations using the FB api
  *
@@ -117,13 +119,10 @@ export default class FacebookController {
             resolve(response.data);
           });
       } else {
-        ls.loadFromLocalStorage('user_pages')
-          .then(result => {
-            this.setUserPages(result);
-            console.log('user page are cached in ls', this.user_pages);
-            resolve(this.user_pages);
-          })
-          .catch(error => reject(error));
+        const pages = ls.loadFromLocalStorage('user_pages')
+        this.setUserPages(pages);
+        console.log('user page are cached in ls', this.user_pages);
+        resolve(this.user_pages);
       }
     });
   }
@@ -258,17 +257,17 @@ export default class FacebookController {
    * @memberof FacebookController
    */
   checkForSubedPageByApi(callback) {
-    this.user_pages.forEach(page => {
+    for (let page of this.user_pages) {
       console.log('looping:', page);
       FB.api(`/me/subscribed_apps`, {
         'access_token': page.access_token }, response => {
         console.log('subscribed_apps:', response.data);
         if (!response || response.error) return callback(response);
-        if (response.data.length === 0) return callback({ error: 'not subed' }); // do nothing
+        if (response.data.length === 0) return callback({ error: 'not subed' });
         this.setUserSubedPage(page);
         callback(undefined, page);
       });
-    });
+    }
   }
 
   /**
@@ -297,8 +296,8 @@ export default class FacebookController {
       return { 'unsubscribe': response };
     } else {
       // page is not subed, add it
+      console.log(this.user_pages);
       const page = this.user_pages.find(page => page.id === e.target.dataset.id);
-      console.log('subing ' + page.name);
       const response = await this.subscribePage(page);
       return { 'subscribe': response };
     }
@@ -314,7 +313,7 @@ export default class FacebookController {
    */
   subscribePage(page) {
     return new Promise((resolve, reject) => {
-      FB.api(this.fb_base_url + '/subscribed_apps?subscribed_fields=messages,messaging_postbacks',
+      FB.api(this.fb_base_url + '/subscribed_apps?subscribed_fields=messages',
         'post', {
           'access_token': page.access_token
         },
@@ -368,7 +367,12 @@ export default class FacebookController {
     }).then(response => response.json());
   }
 
-  // REVIEW find out what's the point of this function!!!
+  
+  /**
+   * will reset the user_subscribed_page to an empty object
+   *
+   * @memberof FacebookController
+   */
   resetSubedPage() {
     this.user_subscribed_page = {};
   }
@@ -381,13 +385,12 @@ export default class FacebookController {
    */
   getPageConversations() {
     return new Promise((resolve, reject) => {
-      FB.api(this.fb_base_url + '/conversations?fields=id,senders', {
+      FB.api(this.fb_base_url + '/conversations?fields=id,senders,unread_count', {
         'access_token': this.user_subscribed_page.access_token
       }, response => {
         console.log('convo', response);
-        if (response.data.length === 0) reject({
-          error: 'no conversations'
-        });
+        if (!response || response.error) return reject(response.error);
+        if (response.data.length === 0) return reject({ error: 'no conversations' });
         resolve(response.data);
       });
     });
@@ -408,6 +411,7 @@ export default class FacebookController {
             const user_info = await this.getUserInfo(sender);
             users_id.push(sender.id);
             arr[pos] = user_info;
+            this.senders_list.push(user_info);
             cb(conversation);
           }
         });
@@ -489,7 +493,7 @@ export default class FacebookController {
    */
   async sendMessage(message, callback) {
     try {
-      const conversation_id = await ls.loadFromLocalStorage('current_conversation');
+      const conversation_id = ls.loadFromLocalStorage('current_conversation');
       const page = this.user_subscribed_page;
       FB.api(`/${conversation_id}/messages`, 'post', {
         'access_token': page.access_token,
@@ -514,7 +518,6 @@ export default class FacebookController {
    * when receive a new message from client, update the message list
    *
    * @param {Object} message
-   * @returns 
    * @memberof FacebookController
    */
   updateConversationMessages(message) {
@@ -522,17 +525,19 @@ export default class FacebookController {
     const page_id = this.user_subscribed_page.id;
     if (message.recipient.id !== page_id) return;
     // check if the sender is in the sender list
+    console.log(this.senders_list);
     const sender = this.senders_list.find(sender => sender.id === message.sender.id);
     if (!sender) {
       // sender is not in the list, send alert
-      alert('new message from new sender');
+      notifier.showSuccessNotification('new message from new sender');
       // this.updateSendersList(message.sender.id);
     } else {
       const active_sender = this.current_sender;
       if (sender.id === active_sender.id) {
-        renderer.renderNewReceivedMessage(message.message.text, sender.name);
+        const sender_name = sender.first_name + ' ' + sender_last_name;
+        renderer.renderNewReceivedMessage(message.message.text, sender_name);
       } else {
-        alert('new message from ' + sender.name);
+        notifier.showSuccessNotification('new message from ' + sender.first_name);
       }
     }
   }
@@ -540,9 +545,8 @@ export default class FacebookController {
     FB.api(`/${sender_id}`, {
       'access_token': this.user_subscribed_page.access_token
     }, response => {
-      if (!response || response.error) console.log('get new user errorr', resposne.error);
+      if (!response || response.error) return console.log('get new user error', resposne.error);
       this.senders_list.push(response);
-      ls.saveInLocalStorage('senders_list', this.senders_list);
     });
   }
 }

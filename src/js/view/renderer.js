@@ -1,7 +1,7 @@
 const pagelist = document.querySelector('#pagelist');
-const conversationlist = document.querySelector('#conversationlist');
-const messagelist = document.querySelector('#messagelist');
-const sendform = document.querySelector('#sendform');
+const conversationlist = document.querySelector('.conversation__people');
+const messagelist = document.querySelector('.chat__messages');
+const sendform = document.querySelector('#send_form');
 const loader = document.querySelector('.loader');
 
 export default {
@@ -52,14 +52,14 @@ export default {
    */
   renderPageConversation: function(conversation, cb) {    
       const markup = `
-      <div class="chat_list" ${ conversation.unread_count > 0 ? 'style="background-color:antiquewhite"' : '' }>
-        <div class="chat_people">
-          <div class="chat_img"> <img src="${conversation.senders.data[0].profile_pic}"> </div>
-          <div class="chat_ib">
-            <a href='#' class="conversation" data-id='${conversation.id}'> ${conversation.senders.data[0].first_name} ${conversation.senders.data[0].last_name} </a>
+        <li>
+          <div class="person__img">
+            <img src="${conversation.senders.data[0].profile_pic}">
           </div>
-        </div>
-      </div>
+          <div class="person__info">
+            <a href="#" class="conversation" data-id="${conversation.id}"> ${conversation.senders.data[0].first_name} ${conversation.senders.data[0].last_name} </a>
+          </div>
+        </li>
       `;
       conversationlist.insertAdjacentHTML('beforeend', markup);
     
@@ -75,10 +75,8 @@ export default {
     this.clearMessageList();
     messages.data.forEach(message => {
       const markup = `
-        <div class="${ message.from.id === sender_id ? 'incoming_msg' : 'outgoing_msg' }">
-          <div class="${ message.from.id === sender_id ? 'received_msg' : 'sent_msg' }"">
-            <p>${message.from.name}: ${message.message}</p>
-          </div>
+        <div class="message ${ message.from.id === sender_id ? 'them' : 'me' }">
+          <p>${message.message}</p>
         </div>
       `;
       messagelist.insertAdjacentHTML('afterbegin', markup);
@@ -89,15 +87,12 @@ export default {
    * render the customer sent message
    *
    * @param {string} message
-   * @param {string} sender
    */
-  renderSentMessage: function(message, sender) {
+  renderSentMessage: function(message) {
     console.log('renderSentMessage');
     const markup = `
-      <div class="outgoing_msg">
-        <div class="sent_msg">
-          <p>${message}</p>
-        </div>
+      <div class="message me">
+        <p>${message}</p>
       </div>
     `;
     messagelist.insertAdjacentHTML('beforeend', markup);
@@ -107,14 +102,11 @@ export default {
    * render the received message from a client
    *
    * @param {string} message
-   * @param {string} sender
    */
-  renderNewReceivedMessage: function(message, sender_name) {
+  renderNewReceivedMessage: function(message) {
     const markup = `
-      <div class="incoming_msg">
-        <div class="received_msg">
-          <p>${sender_name}: ${message}</p>
-        </div>
+      <div class="message them">
+        <p>${message}</p>
       </div>
     `;
     messagelist.insertAdjacentHTML('beforeend', markup);

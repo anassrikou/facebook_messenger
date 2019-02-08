@@ -534,8 +534,7 @@ export default class FacebookController {
     } else {
       const active_sender = this.current_sender;
       if (sender.id === active_sender.id) {
-        const sender_name = sender.first_name + ' ' + sender_last_name;
-        renderer.renderNewReceivedMessage(message.message.text, sender_name);
+        renderer.renderNewReceivedMessage(message.message.text);
       } else {
         notifier.showSuccessNotification('new message from ' + sender.first_name);
       }

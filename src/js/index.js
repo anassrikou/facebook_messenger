@@ -22,7 +22,7 @@ socket.on('new_message', function (data) {
 });
 
 // initialize the send form for our input
-document.querySelector('#sendform').addEventListener('submit', sendMessage);
+document.querySelector('#send_form').addEventListener('submit', sendMessage);
 
 // first init the controller and get the FB instance 
 async function init() {
@@ -321,8 +321,8 @@ function sendMessage (e) {
   }
   fb.sendMessage(form_data, (error, response) => {
     if (error) return console.log('cant send message', error);
-    renderer.renderSentMessage(form_data.get('message'), response.sender);
-    document.querySelector('#sendform').reset();
+    renderer.renderSentMessage(form_data.get('message'));
+    document.querySelector('#send_form').reset();
   });
 }
 

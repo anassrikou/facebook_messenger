@@ -229,7 +229,7 @@ export default class FacebookController {
     return fetch(this.base_url + '/fb-callback.php', {
         method: 'POST',
         body: form_data,
-    }).then(response => response.json());
+    });
   }
 
   /**
@@ -385,7 +385,7 @@ export default class FacebookController {
    */
   getPageConversations() {
     return new Promise((resolve, reject) => {
-      FB.api(this.fb_base_url + '/conversations?fields=id,senders,unread_count', {
+      FB.api(this.fb_base_url + '/conversations?fields=id,senders', {
         'access_token': this.user_subscribed_page.access_token
       }, response => {
         console.log('convo', response);
@@ -409,6 +409,9 @@ export default class FacebookController {
         conversation.senders.data.forEach(async (sender, pos, arr) => {
           if (this.user_subscribed_page.id !== sender.id) {
             const user_info = await this.getUserInfo(sender);
+            if (user_info.error) {
+              return cb(conversation);
+            }
             users_id.push(sender.id);
             arr[pos] = user_info;
             this.senders_list.push(user_info);
@@ -416,16 +419,6 @@ export default class FacebookController {
           }
         });
     });
-    // filter the list of users to keep only unique values
-    // const filtered_users = users.filter((user, pos, arr) => {
-    //   return arr.map(mapObj => mapObj['id']).indexOf(user['id']) === pos;
-    // });
-    // // map through the array and get the user information
-    // filtered_users.forEach( async user => {
-    //   console.log(user_info);
-    //   this.senders_list.push(user_info);
-    //   ls.saveInLocalStorage('senders_list', this.senders_list);
-    // });
   }
 
   getUserInfo(user) {
@@ -448,16 +441,12 @@ export default class FacebookController {
     const conversation_id = e.target.dataset.id;
     renderer.showInput();
     return new Promise((resolve, reject) => {
-      FB.api(`/${conversation_id}?fields=messages{message,from,to}`, {
+      FB.api(`/${conversation_id}?fields=messages{message,from,to,attachments}`, {
           'access_token': this.user_subscribed_page.access_token
         },
         response => {
-          if (!response || response.error) reject({
-            error: response
-          })
-          if (response.messages.data.length === 0) reject({
-            error: 'no messages'
-          });
+          if (!response || response.error) return reject({ error: response });
+          if (response.messages.data.length === 0) return reject({ error: 'no messages' });
           this.makeConversationActive(conversation_id, response.messages.data[0]);
           resolve(response);
         })
@@ -529,12 +518,17 @@ export default class FacebookController {
     const sender = this.senders_list.find(sender => sender.id === message.sender.id);
     if (!sender) {
       // sender is not in the list, send alert
-      notifier.showSuccessNotification('new message from new sender');
+      this.getUserInfo(sender.id).then(response => {
+        notifier.showSuccessNotification('new message from' + response.first_name);
+      })
+      .catch(error => {
+        notifier.showErrorNotification(error);
+      });
       // this.updateSendersList(message.sender.id);
     } else {
       const active_sender = this.current_sender;
       if (sender.id === active_sender.id) {
-        renderer.renderNewReceivedMessage(message.message.text);
+        renderer.renderNewReceivedMessage(message);
       } else {
         notifier.showSuccessNotification('new message from ' + sender.first_name);
       }

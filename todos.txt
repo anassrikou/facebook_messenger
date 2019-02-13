@@ -1,16 +1,21 @@
 Work in progress:
 
+IMPORTANT handle missing images in chat
 IMPORTANT make an error handler function
 IMPORTANT handle new client sending message => made a solution for it, still need testing
-IMPORTANT seems like some errors are fired uncorrectly (find out why)
 
-REVIEW (improvements) make generic function for calling backend and getting result
+REVIEW (improvements) make generic function for calling backend and getting result (low priority)
 
 TODO show notification for a message coming from user who's not current sender 
 TODO update the outdated docs and add the missing ones
+TODO chrome notification
+TODO pagination
+TODO attachements (images and videos)
 
 ======================================
 Done:
+
+IMPORTANT seems like some errors are fired uncorrectly (find out why) => errors being catched in the wrong function
 
 REVIEW saving the token from LS can be risky if user didnt logout and someone else use the computer
  => made the login page clear the LS

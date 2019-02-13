@@ -50,18 +50,21 @@ export default {
    * @param {array} conversations
    * @param {function} cb
    */
-  renderPageConversation: function(conversation, cb) {    
-      const markup = `
-        <li>
-          <div class="person__img">
-            <img src="${conversation.senders.data[0].profile_pic}">
-          </div>
-          <div class="person__info">
-            <a href="#" class="conversation" data-id="${conversation.id}"> ${conversation.senders.data[0].first_name} ${conversation.senders.data[0].last_name} </a>
-          </div>
-        </li>
-      `;
-      conversationlist.insertAdjacentHTML('beforeend', markup);
+  renderPageConversation: async function(conversation, cb) {
+    const user_name = 
+    conversation.senders.data[0].first_name + conversation.senders.data[0].last_name || 
+    conversation.senders.data[0].name;
+    const markup = `
+      <li>
+        <div class="person__img">
+          <img src="${conversation.senders.data[0].profile_pic || 'https://ui-avatars.com/api/?name=' + conversation.senders.data[0].name} ">
+        </div>
+        <div class="person__info">
+          <a href="#" class="conversation" data-id="${conversation.id}"> ${user_name} </a>
+        </div>
+      </li>
+    `;
+    conversationlist.insertAdjacentHTML('beforeend', markup);
     
     cb();
   },
@@ -72,11 +75,13 @@ export default {
    * @param {array} messages
    */
   renderConversationMessages: function(messages, sender_id) {
+    console.log(messages);
     this.clearMessageList();
     messages.data.forEach(message => {
       const markup = `
         <div class="message ${ message.from.id === sender_id ? 'them' : 'me' }">
-          <p>${message.message}</p>
+          ${message.message ? '<p>' + message.message + '</p>' : ''}
+          ${message.attachments ? this.handleAttachment(message.attachments) : ''}
         </div>
       `;
       messagelist.insertAdjacentHTML('afterbegin', markup);
@@ -106,9 +111,12 @@ export default {
   renderNewReceivedMessage: function(message) {
     const markup = `
       <div class="message them">
-        <p>${message}</p>
+      ${message.message ? '<p>' + message.message.text + '</p>' : ''}
+      ${message.attachments ? this.handleAttachment(message.attachments) : ''}
       </div>
     `;
+    const shouldScroll = messagelist.scrollTop + messagelist.clientHeight === messagelist.scrollHeight;
+    if (!shouldScroll) messagelist.scrollTop = messagelist.scrollHeight;
     messagelist.insertAdjacentHTML('beforeend', markup);
   },
 
@@ -172,6 +180,31 @@ export default {
       </li>
     `;
     pagelist.insertAdjacentHTML('beforeend', markup);
+  },
+
+  handleAttachment: function(attachments) {
+    console.log('attachments: ', attachments);
+    const mime_type = attachments.data[0].mime_type;
+    const attachment_type = mime_type.split('/')[0];
+
+    if (attachment_type === 'video') {
+      return  `
+        <video width="320" height="240" controls> 
+          <source src="${attachments.data[0].video_data.url}" type="${mime_type}">
+        </video>
+      `;
+    }
+
+    if (attachment_type === 'image') {
+      return `
+        <img src="${attachments.data[0].image_data.url}" />
+      `;
+    }
+
+    return `
+      <p><i class="fa fa-cloud-download"> </i><a href="${attachments.data[0].file_url}" > ${attachments.data[0].name} </a></p>
+    `;
+    
   }
 
 }

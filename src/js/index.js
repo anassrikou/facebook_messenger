@@ -29,39 +29,34 @@ async function init() {
   try {
     const response = await fb.init();
     if (response.status !== 'connected')
-      return console.log('not connected');
+      throw new Error('not connected');
     // after init, check for the token in localstorage, if not found then in the server
     // and retrieve if found or get new one
     // fb.setToken(response.authResponse.accessToken);
     let token;
-    let token_from_server = 'no token';
+    let token_from_server;
 
+    // always assume that someone else was using the computer and the token has been changed
     token = await checkForTokenInLocal();
+    token_from_server = await checkForTokenInServer();
     console.log(token);
     
-    if (!token) {
-      // there's no token in localstorage, get it from server
-      console.log('no token');
-      
-      token_from_server = JSON.parse(await checkForTokenInServer());
-      if (token_from_server.response === null) {
-        // save the token
+    if (token_from_server.response === "") {
+      // if there is no token in db then get the current one from the login process and save it
+      try {
         fb.setToken(response.authResponse.accessToken);
-      } else {
-        console.log('token_from_server:', token_from_server);
-        fb.setToken(token_from_server.response);
+        const long_lived_token = await getNewLongLivedToken();
+        console.log(long_lived_token);
+        fb.setToken(long_lived_token);
+      } catch (error) {
+        fb.setToken(response.authResponse.accessToken);
+        console.log('cant save llt: ', error);
       }
+    } else {
+      // we got the token from the server successfully
+      fb.setToken(token_from_server.response);
     }
     
-    // if (token_from_server !== 'no token') {
-    //   console.log('saving llt in ls');
-    //   fb.setToken(token_from_server); // save the token in LS
-    // } else {
-    //   fb.setToken(response.authResponse.accessToken);
-    //   console.log('we didnt find any token saved in server');
-    //   fb.setToken(await getNewLongLivedToken());
-    // }
-
     // const declined_permissions = await checkForDeclinedPermissions();
     // console.log(declined_permissions);
     // if (declined_permissions.length !== 0) {
@@ -95,8 +90,7 @@ const checkForTokenInLocal = () => {
 
 const checkForTokenInServer = async () => {
   try {
-    const response = await fb.checkBackendForToken();
-    return await response.text();
+    return await fb.checkBackendForToken().then(response => response.json());
   } catch (error) {
     errorController.handleError(error);
       console.log('checkForTokenInServer error', error);
@@ -105,8 +99,7 @@ const checkForTokenInServer = async () => {
 
 const getNewLongLivedToken = async () => {
   try {
-    const long_lived_token = await fb.getLongLivedToken();
-    return await long_lived_token.text();
+    return await fb.getLongLivedToken().then(response => response.json());
   } catch (error) {
     console.log('getNewLongLivedToken error', error);
   }
@@ -215,7 +208,8 @@ const checkPageConversations = async () => {
   renderer.showLoader();
   const conversations = await getPageConversations();
   fb.getAllSenders(conversations, conversation => {
-    console.log(conversation); renderer.renderPageConversation(conversation, addListenerToConversationNodes)
+    console.log(conversation);
+    renderer.renderPageConversation(conversation, addListenerToConversationNodes)
   });
   // after we finish rendering all the conversations, we remove the loader
   renderer.hideLoader();
@@ -335,7 +329,7 @@ const updateCurrentConversation = (message) => {
         fb.getAllSenders(conversations, conversation => {
           console.log(conversation); renderer.renderPageConversation(conversation, addListenerToConversationNodes)
           // after we finish rendering all the conversations, we remove the loader
-          renderer.hideLoader();  
+          renderer.hideLoader();
         });
       })
       .catch(error => {

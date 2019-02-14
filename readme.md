@@ -1,4 +1,4 @@
-##messenger app built with JS and Facebook JS SDK.
+## messenger app built with JS and Facebook JS SDK.
 
 ### the what, why and how
 #### what is this?

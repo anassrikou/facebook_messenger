@@ -52,7 +52,7 @@ export default {
    */
   renderPageConversation: async function(conversation, cb) {
     const user_name = 
-    conversation.senders.data[0].first_name + conversation.senders.data[0].last_name || 
+    conversation.senders.data[0].first_name + ' ' + conversation.senders.data[0].last_name || 
     conversation.senders.data[0].name;
     const markup = `
       <li>
@@ -202,7 +202,7 @@ export default {
     }
 
     return `
-      <p><i class="fa fa-cloud-download"> </i><a href="${attachments.data[0].file_url}" > ${attachments.data[0].name} </a></p>
+      <p><i class="fas fa-cloud-download-alt"></i><a href="${attachments.data[0].file_url}" > ${attachments.data[0].name} </a></p>
     `;
     
   }

@@ -1,7 +1,6 @@
 Work in progress:
 
-IMPORTANT handle missing images in chat
-IMPORTANT make an error handler function
+IMPORTANT improve the error handler class
 IMPORTANT handle new client sending message => made a solution for it, still need testing
 
 REVIEW (improvements) make generic function for calling backend and getting result (low priority)
@@ -10,12 +9,14 @@ TODO show notification for a message coming from user who's not current sender
 TODO update the outdated docs and add the missing ones
 TODO chrome notification
 TODO pagination
-TODO attachements (images and videos)
+TODO user upload attachments
+
 
 ======================================
 Done:
 
 IMPORTANT seems like some errors are fired uncorrectly (find out why) => errors being catched in the wrong function
+IMPORTANT handle missing images in chat
 
 REVIEW saving the token from LS can be risky if user didnt logout and someone else use the computer
  => made the login page clear the LS
@@ -26,6 +27,7 @@ REVIEW save subscribed pages in db and retrieve when doesnt exist client-side =>
 FIXME status change being called twice (facebook login event is trigerring twice)
 FIXME user pages load twice first time => done
 
+TODO attachments (images and videos)
 TODO show "no page subscribed" if subscribed_page is empty and 
       dont try to load conversations (will result in error) => done
 TODO finish the new sender not appearing in the conversation list 

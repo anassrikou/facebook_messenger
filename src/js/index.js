@@ -9,10 +9,47 @@ import notifier from './controller/NotificationController';
 import renderer from './view/renderer';
 import ls from './model/localstorage';
 import io from 'socket.io-client';
+import { throttle } from 'lodash/function';
 
 const fb = new FacebookController(APP_ID, VERSION);
 const errorController = new ErrorController();
 const socket = io(SOCKETIO_URL);
+
+// NOTE experiment => infinite chat scroll
+
+const chat_block = document.querySelector('.chat__body');
+chat_block.addEventListener('scroll', throttle(loadMoreMessages, 500, { 'leading': false }));
+
+async function loadMoreMessages(e) {
+  if (chat_block.scrollTop === 0) {
+    const result = await fb.loadMoreMessages();
+    console.log(result);
+
+    if (result.done) return console.log(result.done);
+
+    renderer.showLoader();
+    const sender = ls.loadFromLocalStorage('current_sender');
+    renderer.renderConversationMessages(result, sender.id, false);
+    if (result.paging.next) {
+      console.log('has next:', result.paging.next);
+      fb.chat_pagination.next = result.paging.next;
+    } else {
+      fb.chat_pagination.next = '';
+    }
+
+    if (result.paging.previous) {
+      console.log('has previous:', result.paging.previous);
+      fb.chat_pagination.previous = result.paging.previous;
+    } else {
+      fb.chat_pagination.previous = '';
+    }
+    
+    chat_block.scrollTop += 200; // add some space just so the user can scroll up again and load more messages 
+    renderer.hideLoader();
+  }
+} 
+
+// end experiment
 
 // connect to the socketio server to receive the message from facebook
 socket.on('new_message', function (data) {
@@ -205,16 +242,14 @@ const checkUserPages = async () =>  {
 
 const checkPageConversations = async () => {
   // try {
-  renderer.showLoader();
   const conversations = await getPageConversations();
   fb.getAllSenders(conversations.data, conversation => {
     console.log(conversation);
     renderer.renderPageConversation(conversation, addListenerToConversationNodes)
   });
-  // after we finish rendering all the conversations, we remove the loader
-  renderer.hideLoader();
 
   if (conversations.paging.next) {
+    console.log('has next:', conversations.paging.next);
     // enable next button
     const next_button = document.querySelector('#next');
     next_button.classList.remove('btn-default', 'disabled');
@@ -222,6 +257,7 @@ const checkPageConversations = async () => {
     next_button.removeAttribute('disabled');
   }
   if (conversations.paging.previous) {
+    console.log('has previous:', conversations.paging.previous);
     // enable previous button
     const prev_button = document.querySelector('previous');
     prev_button.classList.remove('btn-default', 'disabled');
@@ -289,6 +325,7 @@ const saveSubedPageInDB = async () => {
     await fb.saveSubedPageInDB();
   } catch (error) {
     console.log('saveSubedPageInDB error', error);
+    errorController.handleError(error);
   }
 }
 
@@ -297,23 +334,50 @@ const removeSubedPageFromDB = async () => {
     await fb.removeSubedPageFromDB();
   } catch (error) {
     console.log('removeSubedPageFromDB error', error);
+    errorController.handleError(error);
   }
 }
 
+/**
+ * fetch the messages of the current conversation from the facebook api
+ *
+ * @param {event} e
+ */
 const getMessages = (e) => {
   e.preventDefault();
+  // show the loader here to tell the user we're getting the messages
+  renderer.showLoader();
   fb.getConversationMessages(e).then( async response => {
       console.log('conv messages', response);
-      const sender = await ls.loadFromLocalStorage('current_sender');
+      const sender = ls.loadFromLocalStorage('current_sender');
       renderer.renderConversationMessages(response.messages, sender.id);
       renderer.showInput();
+      checkForPagination(response);
+      jumpToLastMessage();
+      renderer.hideLoader();
     })
     .catch(error => {
       console.log('conv message error ', error);
+      errorController.handleError(error);
     });
 }
 
-function sendMessage (e) {
+function checkForPagination(response) {
+  if (response.messages.paging.next) {
+    console.log('has next:', response.messages.paging.next);
+    fb.chat_pagination.next = response.messages.paging.next;
+  } else {
+    fb.chat_pagination.next = '';
+  }
+  if (response.messages.paging.previous) {
+    console.log('has previous:', response.messages.paging.previous);
+    fb.chat_pagination.previous = response.messages.paging.previous;
+  } else {
+    fb.chat_pagination.previous = '';
+  }
+}
+
+function sendMessage(e) {
   e.preventDefault();
   // console.log(e);
   // TODO handle:
@@ -331,6 +395,7 @@ function sendMessage (e) {
     if (error) return console.log('cant send message', error);
     renderer.renderSentMessage(form_data.get('message'));
     document.querySelector('#send_form').reset();
+    jumpToLastMessage();
   });
 }
 
@@ -338,18 +403,21 @@ const updateCurrentConversation = (message) => {
   fb.updateConversationMessages(message, () => {
     fb.getPageConversations()
       .then(response => {
-        renderer.showLoader();  
         console.log(response);
         fb.getAllSenders(conversations, conversation => {
           console.log(conversation); renderer.renderPageConversation(conversation, addListenerToConversationNodes)
-          // after we finish rendering all the conversations, we remove the loader
-          renderer.hideLoader();
         });
       })
       .catch(error => {
-        console.log(error);
+        errorController.handleError(error);
       });
   });
+}
+
+const jumpToLastMessage = () => {
+  // TODO add condition to jump to last message only if the user close to the end of chat height
+  // scroll the chat to the last message received
+  chat_block.scrollTop = chat_block.scrollHeight + chat_block.clientHeight;
 }
 
 init();

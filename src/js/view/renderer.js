@@ -2,7 +2,7 @@ const pagelist = document.querySelector('#pagelist');
 const conversationlist = document.querySelector('.conversation__people');
 const messagelist = document.querySelector('.chat__messages');
 const sendform = document.querySelector('#send_form');
-const loader = document.querySelector('.loader');
+const loader = document.querySelector('.chat__loader');
 
 export default {
 
@@ -74,9 +74,9 @@ export default {
    *
    * @param {array} messages
    */
-  renderConversationMessages: function(messages, sender_id) {
+  renderConversationMessages: function(messages, sender_id, clear = true) {
     console.log(messages);
-    this.clearMessageList();
+    if (clear) this.clearMessageList();
     messages.data.forEach(message => {
       const markup = `
         <div class="message ${ message.from.id === sender_id ? 'them' : 'me' }">

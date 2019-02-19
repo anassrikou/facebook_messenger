@@ -23,6 +23,7 @@
   "dependencies": {
     "@babel/polyfill": "^7.2.5",
     "awesome-notifications": "^2.2.9",
+    "lodash": "^4.17.11",
     "socket.io": "^2.2.0"
   }
 }

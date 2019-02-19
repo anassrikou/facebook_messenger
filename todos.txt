@@ -5,12 +5,10 @@ IMPORTANT handle new client sending message
 
 REVIEW (improvements) make generic function for calling backend and getting result (low priority)
 REVIEW checking for possiblity to use Jest for unit testing
-REVIEW might rework the project to use react in the future
+REVIEW might rework the project to use react in the future (low priority)
 
-TODO show notification for a message coming from user who's not current sender 
+TODO pagination (made the chat pagination part, working on the conversations part)
 TODO update the outdated docs and add the missing ones
-TODO chrome notification
-TODO pagination
 TODO user upload attachments
 
 
@@ -29,6 +27,8 @@ REVIEW save subscribed pages in db and retrieve when doesnt exist client-side =>
 FIXME status change being called twice (facebook login event is trigerring twice)
 FIXME user pages load twice first time => done
 
+TODO show notification for a message coming from user who's not in the sender list 
+TODO push notification
 TODO attachments (images and videos)
 TODO show "no page subscribed" if subscribed_page is empty and 
       dont try to load conversations (will result in error) => done

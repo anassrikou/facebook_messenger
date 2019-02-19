@@ -4,7 +4,6 @@ export default {
    * save in localstorage by a given key name and value
    *
    * @param {string} key
-   * @param {any} value
    */
   saveInLocalStorage: (key, value) => {
     if (!value) throw new Error('no value provided');
@@ -16,7 +15,7 @@ export default {
    * retrieve a value from localstorage 
    *
    * @param {string} key
-   * @returns promise
+   * @returns {any} value
    */
   loadFromLocalStorage: (key = '') => {
     console.log('key', key);
@@ -28,7 +27,6 @@ export default {
    * delete a key/value from the localstorage by a given key
    *
    * @param {string} key
-   * @returns promise
    */
   removeFromLocalStorage: (key = '') => {
     console.log('key', key);

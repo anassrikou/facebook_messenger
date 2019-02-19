@@ -29,6 +29,8 @@ export default class FacebookController {
     this.current_conversation = '';
     this.current_sender = {};
     this.senders_list = [];
+    this.chat_pagination = { next: '', previous: '' };
+    this.conversation_pagination = { next: '', previous: '' };
   }
   /**
    * initialize the FB sdk
@@ -544,6 +546,16 @@ export default class FacebookController {
     }, response => {
       if (!response || response.error) return console.log('get new user error', resposne.error);
       this.senders_list.push(response);
+    });
+  }
+
+  loadMoreMessages() {
+    return new Promise((resolve, reject) => {
+      if (this.chat_pagination.next === '') return resolve({ done: 'no more messages' });
+      FB.api(this.chat_pagination.next, response => {
+        if (!response || response.error) return reject(response.error);
+        resolve(response);
+      });
     });
   }
 }

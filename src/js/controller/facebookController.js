@@ -391,7 +391,7 @@ export default class FacebookController {
         console.log('convo', response);
         if (!response || response.error) return reject(response.error);
         if (response.data.length === 0) return reject({ error: 'no conversations' });
-        resolve(response.data);
+        resolve(response);
       });
     });
   }
@@ -519,7 +519,7 @@ export default class FacebookController {
     if (!sender) {
       // sender is not in the list, send alert
       this.getUserInfo(sender.id).then(response => {
-        notifier.showSuccessNotification('new message from' + response.first_name);
+        notifier.PushNotification('new message from' + response.first_name, { 'icon': response.profile_pic, body: message.message.text });
       })
       .catch(error => {
         notifier.showErrorNotification(error);
@@ -527,11 +527,15 @@ export default class FacebookController {
       // this.updateSendersList(message.sender.id);
     } else {
       const active_sender = this.current_sender;
-      if (sender.id === active_sender.id) {
+      if (sender.id !== active_sender.id) {
         renderer.renderNewReceivedMessage(message);
-      } else {
-        notifier.showSuccessNotification('new message from ' + sender.first_name);
       }
+      notifier
+       .PushNotification(
+         'new message from' + sender.first_name, 
+         { 'icon': sender.profile_pic, body: message.message.text }
+       );
+      
     }
   }
   updateSendersList(sender_id) {

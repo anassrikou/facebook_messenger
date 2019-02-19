@@ -1,9 +1,11 @@
 Work in progress:
 
 IMPORTANT improve the error handler class
-IMPORTANT handle new client sending message => made a solution for it, still need testing
+IMPORTANT handle new client sending message
 
 REVIEW (improvements) make generic function for calling backend and getting result (low priority)
+REVIEW checking for possiblity to use Jest for unit testing
+REVIEW might rework the project to use react in the future
 
 TODO show notification for a message coming from user who's not current sender 
 TODO update the outdated docs and add the missing ones

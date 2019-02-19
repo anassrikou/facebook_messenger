@@ -10,7 +10,6 @@ import renderer from './view/renderer';
 import ls from './model/localstorage';
 import io from 'socket.io-client';
 
-
 const fb = new FacebookController(APP_ID, VERSION);
 const errorController = new ErrorController();
 const socket = io(SOCKETIO_URL);
@@ -37,11 +36,12 @@ async function init() {
     let token_from_server;
 
     // always assume that someone else was using the computer and the token has been changed
-    token = await checkForTokenInLocal();
+    token = checkForTokenInLocal();
     token_from_server = await checkForTokenInServer();
-    console.log(token);
+    console.log('token from local:', token);
+    console.log('token from server', token_from_server);
     
-    if (token_from_server.response === "") {
+    if (token_from_server === "") {
       // if there is no token in db then get the current one from the login process and save it
       try {
         fb.setToken(response.authResponse.accessToken);
@@ -54,7 +54,7 @@ async function init() {
       }
     } else {
       // we got the token from the server successfully
-      fb.setToken(token_from_server.response);
+      fb.setToken(token_from_server);
     }
     
     // const declined_permissions = await checkForDeclinedPermissions();
@@ -90,16 +90,16 @@ const checkForTokenInLocal = () => {
 
 const checkForTokenInServer = async () => {
   try {
-    return await fb.checkBackendForToken().then(response => response.json());
+    return await fb.checkBackendForToken().then(response => response.text());
   } catch (error) {
     errorController.handleError(error);
-      console.log('checkForTokenInServer error', error);
+    console.log('checkForTokenInServer error', error);
   }
 }
 
 const getNewLongLivedToken = async () => {
   try {
-    return await fb.getLongLivedToken().then(response => response.json());
+    return await fb.getLongLivedToken().then(response => response.text());
   } catch (error) {
     console.log('getNewLongLivedToken error', error);
   }
@@ -207,18 +207,32 @@ const checkPageConversations = async () => {
   // try {
   renderer.showLoader();
   const conversations = await getPageConversations();
-  fb.getAllSenders(conversations, conversation => {
+  fb.getAllSenders(conversations.data, conversation => {
     console.log(conversation);
     renderer.renderPageConversation(conversation, addListenerToConversationNodes)
   });
   // after we finish rendering all the conversations, we remove the loader
   renderer.hideLoader();
+
+  if (conversations.paging.next) {
+    // enable next button
+    const next_button = document.querySelector('#next');
+    next_button.classList.remove('btn-default', 'disabled');
+    next_button.classList.add('btn-primary');
+    next_button.removeAttribute('disabled');
+  }
+  if (conversations.paging.previous) {
+    // enable previous button
+    const prev_button = document.querySelector('previous');
+    prev_button.classList.remove('btn-default', 'disabled');
+    prev_button.classList.add('btn-primary');
+    prev_button.removeAttribute('disabled');
+  }
   // renderer.renderPageConversations(conversations, addListenerToConversationNodes);
   // } catch (error) {
   //   errorController.handleError(error);
   //   console.log('checkPageConversations error', error);
   // }
-  
 }
 
 /**
